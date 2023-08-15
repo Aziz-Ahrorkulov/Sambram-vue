@@ -22,7 +22,8 @@ export default createRouter({
       component: ApplicationView,
     },
     {
-      path: '/dashboard/',
+      path: '/dashboard',
+      name: 'Dashboard',
       component: DashboardView
     },
     {

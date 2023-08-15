@@ -176,36 +176,45 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <!-- Use v-for to loop through the applications array and display the data -->
-                    <tr
-                      v-for="application in filteredApplications"
-                      :key="application.id"
-                    >
-                      <td>{{ application.id }}</td>
-                      <td>
-                        <div class="thumb">
-                          <strong>{{ application.first_name }}</strong>
-                        </div>
-                      </td>
-                      <td>
-                        <div class="thumb">
-                          <strong>{{ application.last_name }}</strong>
-                        </div>
-                      </td>
-                      <td>{{ application.phone_number }}</td>
-                      <td>{{ application.birth_date }}</td>
-                      <td>{{ application.gender }}</td>
-                      <td><a href="{{ application.cv.url }}">Download Resume</a></td>
-                      <td>
-                        <a href="#" @click="applyToNextManager(application.id)">Apply</a>
+                    <template v-if="filteredApplications.length > 0">
+                      <!-- Use v-for to loop through the applications array and display the data -->
+                      <tr
+                        v-for="application in filteredApplications"
+                        :key="application.id"
+                      >
+                        <td>{{ application.id }}</td>
+                        <td>
+                          <div class="thumb">
+                            <strong>{{ application.first_name }}</strong>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="thumb">
+                            <strong>{{ application.last_name }}</strong>
+                          </div>
+                        </td>
+                        <td>
+                          {{ application.phone_number }}
+                        </td>
+                        <td>{{ application.birth_date }}</td>
+                        <td>{{ application.gender }}</td>
+                        <td><a href="#">Download Resume</a></td>
+                        <td>
+                          <a href="#" @click="applyToNextManager(application.id)"
+                            >Apply</a
+                          >
 
-                        <a
-                          href="#"
-                          class="btn btn-secondary"
-                          style="background-color: rgb(216, 23, 23)"
-                          >&#10006;</a
-                        >
-                      </td>
+                          <a
+                            href="#"
+                            class="btn btn-secondary"
+                            style="background-color: rgb(216, 23, 23)"
+                            >&#10006;</a
+                          >
+                        </td>
+                      </tr>
+                    </template>
+                    <tr v-else>
+                      <td colspan="8">Заявки отсутствуют</td>
                     </tr>
                   </tbody>
                 </table>
@@ -220,65 +229,65 @@
 
 <script>
 import axios from "axios";
+import { mapGetters } from "vuex";
 
 export default {
   name: "DashboardView",
   data() {
     return {
-      applications: [],
       userRole: null,
+      applications: [],
     };
   },
   computed: {
+    ...mapGetters(["getUserRole"]),
     filteredApplications() {
-      if (this.userRole === 2) {
-        return this.applications.filter(
-          (application) => !application.first_validation && !application.second_validation
-        );
-      } else if (this.userRole === 3) {
-        return this.applications.filter(
-          (application) => application.first_validation && !application.second_validation
-        );
-      } else if (this.userRole === 4) {
-        return this.applications.filter(
-          (application) => application.first_validation && application.second_validation
-        );
-      } else {
-        // Default: Admin (role == 1)
-        return this.applications.filter(
-          (application) => application.first_validation && application.second_validation
-        );
+      if (!this.applications || this.applications.length === 0) {
+        return [];
       }
+
+      return this.applications.filter((application) => {
+        const { first_validation, second_validation } = application;
+
+        if (this.userRole === 2) {
+          return !first_validation && !second_validation;
+        } else if (this.userRole === 3) {
+          return first_validation && !second_validation;
+        } else if (this.userRole === 4) {
+          return first_validation && second_validation;
+        } else {
+          return first_validation && second_validation;
+        }
+      }).map((application) => {
+        // Обработка значений null
+        return {
+          ...application,
+          phone_number: application.phone_number || "No phone number",
+          birth_date: application.birth_date || "No birth date",
+          // Добавьте обработку других полей по аналогии
+        };
+      });
     },
-  },
-  created() {
-    this.fetchUserAndApplications();
   },
   methods: {
     fetchUserAndApplications() {
       axios
         .get("http://127.0.0.1:8000/api/applications/")
+        
         .then((response) => {
           console.log("API Response:", response.data);
-
-          // Проверяем, что пользователь является админом (роль == 1)
-          if (this.userRole === 1) {
-            // В случае админа, получаем все заявки
-            this.applications = response.data;
-          } else {
-            // В случае других ролей, фильтруем заявки по менеджеру
-            const userId = this.$store.state.user.id;
-            this.applications = response.data.filter(
-              (application) => application.manager === userId
-            );
-          }
-
-          console.log("Filtered Applications:", this.applications);
+          this.applications = response.data;
+          this.userRole = this.getUserRole;
+          this.$store.dispatch('fetchUserAndApplications');
+          console.log("Filtered Applications:", this.filteredApplications);
         })
         .catch((error) => {
           console.error("Error fetching data:", error);
         });
     },
+  },
+  created() {
+    this.fetchUserAndApplications();
   },
 };
 </script>
