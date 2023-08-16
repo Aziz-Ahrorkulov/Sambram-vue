@@ -126,7 +126,9 @@
                 aria-expanded="false"
               >
                 <span class="mr-2 d-none d-lg-inline text-gray-600 small"
-                  >Douglas McGee</span
+                  >Douglas McGee
+                  <p v-if="authToken">Ваш токен: {{ authToken }}</p>
+                  <p v-else>Токен не определен.</p></span
                 >
                 <img class="img-profile rounded-circle" src="img/undraw_profile.svg" />
               </a>
@@ -176,42 +178,41 @@
                     </tr>
                   </thead>
                   <tbody>
-                    <template v-if="filteredApplications.length > 0">
-                      <!-- Use v-for to loop through the applications array and display the data -->
-                      <tr
-                        v-for="application in filteredApplications"
-                        :key="application.id"
-                      >
-                        <td>{{ application.id }}</td>
-                        <td>
-                          <div class="thumb">
-                            <strong>{{ application.first_name }}</strong>
-                          </div>
-                        </td>
-                        <td>
-                          <div class="thumb">
-                            <strong>{{ application.last_name }}</strong>
-                          </div>
-                        </td>
-                        <td>
-                          {{ application.phone_number }}
-                        </td>
-                        <td>{{ application.birth_date }}</td>
-                        <td>{{ application.gender }}</td>
-                        <td><a href="#">Download Resume</a></td>
-                        <td>
-                          <a href="#" @click="applyToNextManager(application.id)"
-                            >Apply</a
-                          >
+                    <template v-if="applications.length > 0">
+                      <div v-if="role === 1 || role === 2">
+                        <!-- Use v-for to loop through the applications array and display the data -->
+                        <tr v-for="application in applications" :key="application.id">
+                          <td>{{ application.id }}</td>
+                          <td>
+                            <div class="thumb">
+                              <strong>{{ application.first_name }}</strong>
+                            </div>
+                          </td>
+                          <td>
+                            <div class="thumb">
+                              <strong>{{ application.last_name }}</strong>
+                            </div>
+                          </td>
+                          <td>
+                            {{ application.phone_number }}
+                          </td>
+                          <td>{{ application.birth_date }}</td>
+                          <td>{{ application.gender }}</td>
+                          <td><a href="#">Download Resume</a></td>
+                          <td>
+                            <a href="#" @click="applyToNextManager(application.id)"
+                              >Apply</a
+                            >
 
-                          <a
-                            href="#"
-                            class="btn btn-secondary"
-                            style="background-color: rgb(216, 23, 23)"
-                            >&#10006;</a
-                          >
-                        </td>
-                      </tr>
+                            <a
+                              href="#"
+                              class="btn btn-secondary"
+                              style="background-color: rgb(216, 23, 23)"
+                              >&#10006;</a
+                            >
+                          </td>
+                        </tr>
+                      </div>
                     </template>
                     <tr v-else>
                       <td colspan="8">Заявки отсутствуют</td>
@@ -237,49 +238,20 @@ export default {
     return {
       userRole: null,
       applications: [],
+      authToken: '', // Инициализируем пустым значением
     };
   },
   computed: {
     ...mapGetters(["getUserRole"]),
-    filteredApplications() {
-      if (!this.applications || this.applications.length === 0) {
-        return [];
-      }
-
-      return this.applications.filter((application) => {
-        const { first_validation, second_validation } = application;
-
-        if (this.userRole === 2) {
-          return !first_validation && !second_validation;
-        } else if (this.userRole === 3) {
-          return first_validation && !second_validation;
-        } else if (this.userRole === 4) {
-          return first_validation && second_validation;
-        } else {
-          return first_validation && second_validation;
-        }
-      }).map((application) => {
-        // Обработка значений null
-        return {
-          ...application,
-          phone_number: application.phone_number || "No phone number",
-          birth_date: application.birth_date || "No birth date",
-          // Добавьте обработку других полей по аналогии
-        };
-      });
-    },
   },
   methods: {
     fetchUserAndApplications() {
       axios
-        .get("http://127.0.0.1:8000/api/applications/")
-        
+        .get("http://127.0.0.1:8000/api/applications/") // Используйте правильный URL для получения отфильтрованных заявок
         .then((response) => {
           console.log("API Response:", response.data);
           this.applications = response.data;
           this.userRole = this.getUserRole;
-          this.$store.dispatch('fetchUserAndApplications');
-          console.log("Filtered Applications:", this.filteredApplications);
         })
         .catch((error) => {
           console.error("Error fetching data:", error);
@@ -288,6 +260,7 @@ export default {
   },
   created() {
     this.fetchUserAndApplications();
+    
   },
 };
 </script>
